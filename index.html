@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直播管理后台</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <!-- 引入Element UI的CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 左侧导航栏 -->
+            <div class="sidebar">
+                <div class="logo">直播管理后台</div>
+                <ul class="nav-menu">
+                    <li class="nav-item" :class="{ active: activeTab === 'preview' }" @click="switchTab('preview')">直播预告管理</li>
+                    <li class="nav-item" :class="{ active: activeTab === 'replay' }" @click="switchTab('replay')">直播回放管理</li>
+                </ul>
+            </div>
+            
+            <!-- 右侧内容区 -->
+            <div class="content">
+                <!-- 直播预告管理 -->
+                <div v-if="activeTab === 'preview'" class="preview-management">
+                    
+                    <!-- 筛选区域 -->
+                    <div class="filter-section">
+                        <div class="filter-item">
+                            <label>标题：</label>
+                            <input type="text" v-model="filters.title" placeholder="请输入标题关键词">
+                        </div>
+                        <div class="filter-item">
+                            <label>内容状态：</label>
+                            <select v-model="filters.contentStatus">
+                                <option value="">全部</option>
+                                <option value="online">上架</option>
+                                <option value="offline">下架</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>直播状态：</label>
+                            <select v-model="filters.liveStatus">
+                                <option value="">全部</option>
+                                <option value="notStarted">未开始</option>
+                                <option value="ongoing">进行中</option>
+                                <option value="ended">已结束</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>创建时间：</label>
+                            <input type="date" v-model="filters.createTimeStart">
+                            <span>至</span>
+                            <input type="date" v-model="filters.createTimeEnd">
+                        </div>
+                        <div class="filter-item">
+                            <label>直播时间：</label>
+                            <input type="date" v-model="filters.liveTimeStart">
+                            <span>至</span>
+                            <input type="date" v-model="filters.liveTimeEnd">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn btn-primary" @click="searchLives">搜索</button>
+                            <button class="btn btn-default" @click="resetFilters">重置</button>
+                            <button class="btn btn-success" @click="addNewLive">新增直播预告</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 列表区域 -->
+                    <div class="list-section">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>标题</th>
+                                    <th>内容状态</th>
+                                    <th>直播状态</th>
+                                    <th>直播时间</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in filteredLiveList" :key="item.id">
+                                    <td>{{ index + 1 }}</td>
+                                    <td>{{ item.title }}</td>
+                                    <td>
+                                        <span :class="['status-tag', item.contentStatus === 'online' ? 'status-online' : 'status-offline']">
+                                            {{ item.contentStatus === 'online' ? '上架' : '下架' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span :class="['status-tag', 
+                                            item.liveStatus === 'notStarted' ? 'status-not-started' : 
+                                            item.liveStatus === 'ongoing' ? 'status-ongoing' : 'status-ended']">
+                                            {{ 
+                                                item.liveStatus === 'notStarted' ? '未开始' : 
+                                                item.liveStatus === 'ongoing' ? '进行中' : '已结束' 
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDate(item.liveTime) }}</td>
+                                    <td>{{ formatDate(item.createTime) }}</td>
+                                    <td class="operation">
+                                        <button v-if="item.contentStatus === 'online'" 
+                                                class="btn btn-warning" 
+                                                @click="changeStatus(item, 'offline')">
+                                            下架
+                                        </button>
+                                        <button v-else 
+                                                class="btn btn-success" 
+                                                @click="changeStatus(item, 'online')">
+                                            上架
+                                        </button>
+                                        <button class="btn btn-primary" @click="editLive(item)">编辑</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredLiveList.length === 0">
+                                    <td colspan="7" class="no-data">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 直播回放管理 -->
+                <div v-if="activeTab === 'replay'" class="replay-management">
+                    <h2>直播回放管理</h2>
+                    
+                    <!-- 筛选区域 -->
+                    <div class="filter-section">
+                        <div class="filter-item">
+                            <label>标题：</label>
+                            <input type="text" v-model="replayFilters.title" placeholder="请输入标题关键词">
+                        </div>
+                        <div class="filter-item">
+                            <label>内容状态：</label>
+                            <select v-model="replayFilters.contentStatus">
+                                <option value="">全部</option>
+                                <option value="online">上架</option>
+                                <option value="offline">下架</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>创建时间：</label>
+                            <input type="date" v-model="replayFilters.createTimeStart">
+                            <span>至</span>
+                            <input type="date" v-model="replayFilters.createTimeEnd">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn btn-primary" @click="searchReplays">搜索</button>
+                            <button class="btn btn-default" @click="resetReplayFilters">重置</button>
+                            <button class="btn btn-success" @click="addNewReplay">新增直播回放</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 列表区域 -->
+                    <div class="list-section">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>标题</th>
+                                    <th>内容状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in filteredReplayList" :key="item.id">
+                                    <td>{{ index + 1 }}</td>
+                                    <td>{{ item.title }}</td>
+                                    <td>
+                                        <span :class="['status-tag', item.contentStatus === 'online' ? 'status-online' : 'status-offline']">
+                                            {{ item.contentStatus === 'online' ? '上架' : '下架' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDate(item.createTime) }}</td>
+                                    <td class="operation">
+                                        <button v-if="item.contentStatus === 'online'" 
+                                                class="btn btn-warning" 
+                                                @click="changeReplayStatus(item, 'offline')">
+                                            下架
+                                        </button>
+                                        <button v-else 
+                                                class="btn btn-success" 
+                                                @click="changeReplayStatus(item, 'online')">
+                                            上架
+                                        </button>
+                                        <button class="btn btn-primary" @click="editReplay(item)">编辑</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredReplayList.length === 0">
+                                    <td colspan="5" class="no-data">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 编辑弹窗 -->
+        <div class="modal" v-if="showEditModal" @click="closeModal">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h3>编辑直播预告</h3>
+                    <span class="close" @click="closeModal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>标题：</label>
+                        <input type="text" v-model="editingLive.title">
+                    </div>
+                    <div class="form-group">
+                        <label>讲师：</label>
+                        <input type="text" v-model="editingLive.teacher" placeholder="请输入讲师姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>直播时间：</label>
+                        <div class="time-range">
+                            <input type="time" v-model="editingLive.liveTimeStart" placeholder="开始时间">
+                            <span>至</span>
+                            <input type="time" v-model="editingLive.liveTimeEnd" placeholder="结束时间">
+                        </div>
+                        <input type="date" v-model="editingLive.liveDate" placeholder="直播日期">
+                    </div>
+                    <div class="form-group">
+                        <label>内容状态：</label>
+                        <select v-model="editingLive.contentStatus">
+                            <option value="online">上架</option>
+                            <option value="offline">下架</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>直播链接：</label>
+                        <textarea v-model="editingLive.liveUrl" rows="3" placeholder="请输入直播链接"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>封面图：</label>
+                        <div class="upload-container">
+                            <input type="file" @change="handleCoverUpload" accept="image/*" ref="coverUpload">
+                            <div class="preview-image" v-if="editingLive.coverImage">
+                                <img :src="editingLive.coverImage" alt="封面图预览">
+                                <button class="btn btn-danger btn-sm" @click="removeCoverImage">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>直播二维码：</label>
+                        <div class="upload-container">
+                            <input type="file" @change="handleQrCodeUpload" accept="image/*" ref="qrCodeUpload">
+                            <div class="preview-image" v-if="editingLive.qrCodeImage">
+                                <img :src="editingLive.qrCodeImage" alt="二维码预览">
+                                <button class="btn btn-danger btn-sm" @click="removeQrCodeImage">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveLive">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 回放编辑弹窗 -->
+        <div class="modal" v-if="showReplayEditModal" @click="closeReplayModal">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h3>{{ isAddReplayMode ? '新增回放' : '编辑回放' }}</h3>
+                    <span class="close" @click="closeReplayModal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>标题：</label>
+                        <input type="text" v-model="editingReplay.title">
+                    </div>
+                    <div class="form-group">
+                        <label>讲师：</label>
+                        <input type="text" v-model="editingReplay.teacher" placeholder="请输入讲师姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>内容状态：</label>
+                        <select v-model="editingReplay.contentStatus">
+                            <option value="online">上架</option>
+                            <option value="offline">下架</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>回放视频：</label>
+                        <div class="upload-container">
+                            <input type="file" @change="handleReplayFileUpload" accept="video/*" ref="replayFileUpload">
+                            <div class="file-preview" v-if="editingReplay.replayFile">
+                                <div class="file-info">
+                                    <span class="file-name">{{ editingReplay.replayFileName }}</span>
+                                    <button class="btn btn-danger btn-sm" @click="removeReplayFile">删除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>封面图：</label>
+                        <div class="upload-container">
+                            <input type="file" @change="handleReplayCoverUpload" accept="image/*" ref="replayCoverUpload">
+                            <div class="preview-image" v-if="editingReplay.coverImage">
+                                <img :src="editingReplay.coverImage" alt="封面图预览">
+                                <button class="btn btn-danger btn-sm" @click="removeReplayCoverImage">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" @click="closeReplayModal">取消</button>
+                    <button class="btn btn-primary" @click="saveReplay">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Vue.js和Element UI的CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
