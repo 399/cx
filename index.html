@@ -286,15 +286,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>回放视频：</label>
-                        <div class="upload-container">
-                            <input type="file" @change="handleReplayFileUpload" accept="video/*" ref="replayFileUpload">
-                            <div class="file-preview" v-if="editingReplay.replayFile">
-                                <div class="file-info">
-                                    <span class="file-name">{{ editingReplay.replayFileName }}</span>
-                                    <button class="btn btn-danger btn-sm" @click="removeReplayFile">删除</button>
-                                </div>
-                            </div>
+                        <label>回放视频链接：</label>
+                        <div class="link-input-container">
+                            <input type="text" v-model="editingReplay.replayUrl" placeholder="请输入回放视频链接">
                         </div>
                     </div>
                     <div class="form-group">

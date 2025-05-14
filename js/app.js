@@ -470,34 +470,7 @@ new Vue({
             this.closeModal();
         },
         
-        // 处理回放文件上传
-        handleReplayFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            // 在实际应用中，这里会调用API上传文件
-            // 这里模拟文件上传成功
-            this.editingReplay.replayFile = file;
-            this.editingReplay.replayFileName = file.name;
-            this.editingReplay.replayUrl = URL.createObjectURL(file); // 创建临时URL，实际应用中应该使用服务器返回的URL
-            
-            this.$message({
-                message: '文件上传成功',
-                type: 'success'
-            });
-        },
-        
-        // 移除回放文件
-        removeReplayFile() {
-            this.editingReplay.replayFile = null;
-            this.editingReplay.replayFileName = '';
-            this.editingReplay.replayUrl = '';
-            
-            // 重置文件输入框
-            if (this.$refs.replayFileUpload) {
-                this.$refs.replayFileUpload.value = '';
-            }
-        },
+
         
         // 处理回放封面上传
         handleReplayCoverUpload(e) {
